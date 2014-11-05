@@ -1,0 +1,2 @@
+#!/bin/bash
+find / -type f -ignore_readdir_race -size +20M -exec ls -lh {} \; | awk '{ print $8 ": " $5 }'
