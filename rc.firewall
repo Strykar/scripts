@@ -1,0 +1,229 @@
+#!/bin/sh
+#Tight rc.firewall configuration
+#Author - Avinash Duduskar 15/03/06
+#This uses a dynamic flatfile called /etc/hosts.deny as a block list
+touch /etc/hosts.deny
+
+# Define our interface, static IP and DNS servers to tighten UDP
+IP="66.141.68.217"
+INT="eth0"
+DNS1="151.164.23.201"
+DNS2="151.164.1.8"
+IPT="/usr/sbin/iptables"
+
+## Flush and delete tables, states and disable forwarding
+
+$IPT -F
+$IPT -X
+
+echo "0" > /proc/sys/net/ipv4/ip_forward
+
+
+## Default chain policies - DROP ALL IN & OUT; ALLOW lo
+
+$IPT -P INPUT DROP
+$IPT -P OUTPUT DROP
+$IPT -P FORWARD DROP
+$IPT -A INPUT -i lo -j ACCEPT
+$IPT -A OUTPUT -o lo -j ACCEPT
+$IPT -A INPUT -s $IP -i $INT -j DROP
+$IPT -A INPUT -s 127.0.0.1 -i $INT -j DROP
+
+
+
+# Log SSH and other SYN|ACKs so we have logs of all successful completed connections
+
+$IPT -N SYNACK
+$IPT -A SYNACK -j LOG --log-level debug
+$IPT -A SYNACK -j ACCEPT
+#$IPT -A INPUT -j LOG --log-level debug
+#$IPT -A OUTPUT -j LOG --log-level debug
+
+#$IPT -A OUTPUT -p tcp --sport 22 --tcp-flags ALL SYN,ACK -j LOG \
+#    --log-level debug --log-prefix "SSH LOGIN: "
+
+#$IPT -A OUTPUT -p tcp ! --sport 22 --tcp-flags ALL SYN,ACK -j LOG \
+#    --log-level debug --log-prefix "3-SYN-ACK: "
+    
+#$IPT -A INPUT -m tcp -p tcp ! --syn -m state --state NEW -j LOG \
+#    --log-level debug --log-prefix "New not syn: "
+
+$IPT -A INPUT -s ! $DNS1 -d ! $IP -m udp -p udp -j LOG --log-level debug \
+    --log-prefix "UDP PASSED: "
+    
+$IPT -A INPUT -s ! $DNS2 -d ! $IP -m udp -p udp -j LOG --log-level debug \
+    --log-prefix "UDP PASSED: "
+    
+$IPT -A OUTPUT -d ! $DNS1 -s ! $IP -m udp -p udp -j LOG --log-level debug \
+    --log-prefix "UDP PASSED: "
+ 
+$IPT -A OUTPUT -d ! $DNS2 -s ! $IP -m udp -p udp -j LOG --log-level debug \
+    --log-prefix "UDP PASSED: "
+    
+
+$IPT -A INPUT -m tcp -p tcp -m state --state NEW -j LOG --log-level debug --log-prefix "NEW CONNECTION: "
+
+#$IPT -N LOG_DROP
+#$IPT -A LOG_DROP -j LOG --log-tcp-options --log-ip-options --log-prefix "[IPTABLES DROP] : "
+#$IPT -A LOG_DROP -j DROP
+#$IPT -A INPUT -j LOG_DROP    
+#$IPT -A OUTPUT -m owner --uid-owner 1003 -m state --state NEW -p tcp -j LOG --log-level debug --log-tcp-options --log-ip-options --log-prefix "[IRCD-BOT SPEAK]: "
+
+# Check states, match and allow sane connections
+
+$IPT -A INPUT -p tcp -m tcp ! --tcp-flags FIN,SYN,RST,ACK SYN -m state --state NEW -j DROP 
+$IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+
+
+## Allow UID 99 for HTTPD & UID 1003 for IRCD
+
+
+$IPT -A INPUT -p tcp --dport 80 --sport 1024:65535 -m state --state NEW -j ACCEPT
+$IPT -A INPUT -p tcp --dport 443 --sport 1024:65535 -m state --state NEW -j ACCEPT
+$IPT -A INPUT -p tcp -m state --state NEW -m tcp --dport 6667 -j ACCEPT 
+$IPT -A INPUT -p tcp -m state --state NEW -m tcp --dport 6697 -j ACCEPT
+
+$IPT -A OUTPUT -m owner --uid-owner 1003 -p tcp -j ACCEPT        
+$IPT -A OUTPUT -m owner --uid-owner 99 -p tcp -j ACCEPT
+$IPT -A OUTPUT -m owner --uid-owner 0 -p tcp -j ACCEPT
+$IPT -A OUTPUT -m owner --uid-owner 1009 -p tcp -j ACCEPT
+
+$IPT -A OUTPUT -m owner --uid-owner 99 -d $DNS1 -p tcp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 1003 -d $DNS1 -p tcp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 99 -d $DNS1 -p udp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 1003 -d $DNS1 -p udp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 99 -d $DNS2 -p tcp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+        
+$IPT -A OUTPUT -m owner --uid-owner 1003 -d $DNS2 -p tcp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+                
+$IPT -A OUTPUT -m owner --uid-owner 99 -d $DNS2 -p udp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+                        
+$IPT -A OUTPUT -m owner --uid-owner 1003 -d $DNS2 -p udp \
+    --dport 53 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+$IPT -A OUTPUT -m owner --uid-owner 1003 -p tcp \
+    --dport 113 -d 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 1003 -p udp \
+    --dport 113 -d 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+
+
+## Allow incoming/outgoing SMTP and root to do DNS queries
+
+$IPT -A INPUT -p tcp --dport 25 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 0 -p tcp --sport 25 \
+    -m state --state ESTABLISHED,RELATED -j ACCEPT
+    
+
+$IPT -A OUTPUT -o $INT -m owner --uid-owner 0 -d $DNS1 -p udp \
+    --dport 53 --sport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+$IPT -A OUTPUT -m owner --uid-owner 0 -d $DNS1 -p tcp \
+    --dport 53 --sport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -o $INT -m owner --uid-owner 0 -d $DNS2 -p udp \
+    --dport 53 --sport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+        
+$IPT -A OUTPUT -m owner --uid-owner 0 -d $DNS2 -p tcp \
+    --dport 53 --sport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+$IPT -A OUTPUT -m owner --uid-owner 1005 -d $DNS2 -p udp \
+    --dport 53 --sport 1024:65535 \
+        -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT    
+        
+$IPT -A OUTPUT -m owner --uid-owner 1005 -d $DNS1 -p udp \
+    --dport 53 --sport 1024:65535 \
+        -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+
+## Allow incoming Dovecot PoP server connections
+
+$IPT -A INPUT -p tcp --dport 110 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A INPUT -p tcp --dport 995 --sport 1024:65535 -m state \
+    --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+
+## Allow users root, h4x0r3d and fwaggle to request DNS based on UID
+
+$IPT -A OUTPUT -m owner --uid-owner 0 -p tcp --dport 53 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 1003 -p tcp --dport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 1005 -p tcp --dport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 0 -p udp --dport 53 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    
+$IPT -A OUTPUT -m owner --uid-owner 1003 -p udp --dport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+$IPT -A OUTPUT -m owner --uid-owner 1005 -p udp --dport 1024:65535 \
+    -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+## Allow and rate-limit SSH and drop more than 2 connections/min and pass my ISP subnet thru
+
+$IPT -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
+$IPT -A INPUT -p tcp -s 59.88.0.0/255.248.0.0 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -p tcp -s 59.96.0.0/255.252.0.0 --dport 22 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -I INPUT -i eth0 -p tcp --dport 22 -m state --state NEW -m recent --set
+$IPT -I INPUT -i eth0 -p tcp --dport 22 -m state --state NEW -m recent \
+    --update --seconds 60 --hitcount 2 -j DROP
+
+
+
+## Allow my ISP subnet to access webmin and the BOINC client
+
+$IPT -A INPUT -s 59.88.0.0/255.248.0.0 -p tcp -m state --state NEW -m tcp --dport 10000 -j ACCEPT 
+$IPT -A INPUT -s 59.96.0.0/255.252.0.0 -p tcp -m state --state NEW -m tcp --dport 10000 -j ACCEPT 
+
+$IPT -A INPUT -s 59.88.0.0/255.248.0.0 -p tcp -m state --state NEW -m tcp --dport 65500 -j ACCEPT
+$IPT -A INPUT -s 59.96.0.0/255.252.0.0 -p tcp -m state --state NEW -m tcp --dport 65500 -j ACCEPT
+
+
+
+## Allow and rate-limit ICMP echo and time exceeded requests
+
+$IPT -A INPUT -j REJECT --reject-with icmp-port-unreachable
+$IPT -A INPUT -p icmp --icmp-type 8 -m limit --limit 3/second -j ACCEPT
+$IPT -A INPUT -p ICMP --icmp-type 11 -m limit --limit 2/second -j ACCEPT
+
+
+##Deny using /etc/deny.hosts
+
+    for host in `cat /etc/deny.hosts`; do
+        $IPT -I INPUT -s $host -j DROP
+        $IPT -I OUTPUT -d $host -j DROP
+    
+done
