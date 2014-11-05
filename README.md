@@ -2,4 +2,4 @@ Scripts
 =======
 
 Scripts, code, BPF filters and whippets
-We be kernen hackin foo
+We from the Performance team, we be kernen hacking too
