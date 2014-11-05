@@ -1,0 +1,130 @@
+#!/bin/sh 
+# Start/stop/restart the Dovecot PoP/IMAP server daemon.
+# Sanity check.  If either /usr/local/sbin/dovecot or /usr/local/etc/dovecot.conf
+# aren't ready, it doesn't make much sense to try to run this script.
+
+if [ ! -x /usr/local/sbin/dovecot ]; then
+  echo "/etc/rc.d/rc.dovecot:  no /usr/local/sbin/dovecot found (or not executable); cannot start."
+  exit 1
+elif [ ! -f /usr/local/etc/dovecot.conf ]; then
+  echo "/etc/rc.d/rc.dovecot:  no /usr/local/etc/dovecot.conf found; cannot start /usr/local/sbin/dovecot."
+  exit 1
+fi
+
+# Start Dovecot
+dovecot_start() {
+if ps axc | grep [d]ovecot ; then
+  echo ""
+  echo "NOTICE:  Dovecot already running..   ...exiting."
+  exit 1
+  
+elif [ -f /usr/local/var/run/dovecot/master.pid ] ; then
+  echo "/etc/rc.d/rc.dovecot:  THERE SEEMS TO BE A STALE PID..Dovecot not shutdown properly?"
+  echo "Deleting /usr/local/var/run/dovecot/master.pid"
+  rm /usr/local/var/run/dovecot/master.pid
+
+else
+
+  echo "Starting Dovecot:  /usr/local/sbin/dovecot.."
+  /usr/local/sbin/dovecot
+
+fi
+
+    if ps axc | grep [d]ovecot ; then
+  	echo ""
+  	echo "SUCCESS:  Dovecot started!"
+        exit 0
+        
+elif ! ps axc | grep [d]ovecot ; then
+
+BINARY=`which dovecot`
+
+COL_NORM="$(tput setaf 9)"
+COL_RED="$(tput setaf 1)"
+COL_GREEN="$(tput setaf 2)"
+COL_YELLOW="$(tput setaf 3)"
+COL_BOLD="$(tput bold)"
+COL_DIM="$(tput dim)"
+
+	echo ""
+        echo -e "$COL_YELLOW ****!!!!WARNING!!!!**** $COL_NORM"
+        echo ""
+        echo -e "$COL_BOLD The Dovecot daemon did not start! This is odd."
+        echo "I will try again. If this does not work, try starting"
+        echo "Dovecot by hand with the foreground switch -F"
+        echo "As root try: $COL_NORM"
+        echo -e "$COL_GREEN /usr/local/sbin/dovecot -F $COL_NORM"
+        sleep 7
+        echo ""
+        echo ""
+        echo -e "Attempting to start Dovecot again:$COL_GREEN /%ENV/%VARIABLE/%TO/dovecot -c /usr/local/etc/dovecot.conf $COL_NORM"
+	$BINARY -c /usr/local/etc/dovecot.conf
+        sleep 12
+
+    if ps axc | grep [d]ovecot ; then
+       exit 0
+    
+    
+else
+	echo ""
+  	echo "$COL_RED ****!!!FAILED!!!**** $COL_NORM"
+  	echo ""
+  	echo "$COL_BOLD Even after attempting a few misguided hacks I could not"
+  	echo "start the Dovecot PoP3s/IMAPs daemon."
+  	echo "There seems to be an error I can't fix on my own."
+  	echo -e "Check your Dovecot binary. Good luck! \033[0m"
+  	echo ""
+    fi
+ fi
+}
+
+# Stop all running copies of Dovecot (/usr/local/sbin/dovecot):
+dovecot_stop() {
+# Check to see if Dovecot's master pid exists
+
+if [ -f /usr/local/var/run/dovecot/master.pid ]; then
+PID=`pgrep -f /usr/local/sbin/dovecot`
+  echo "Stopping Dovecot:  /bin/kill -15 $PID.." 
+  echo `ps axc|grep -w "dovecot"|grep -v "dovecot-auth"`
+  /bin/kill -15 $PID 
+  echo ""
+  echo "SUCCESS:  Dovecot stopped!"    
+  
+elif ! ps axc | grep [d]ovecot ; then
+  echo ""
+  echo "Dovecot is not running!" &
+  exit 1
+fi  
+
+  # In case there are stray master Dovecot processes remaining  
+  # as with a runaway child process talking to an email-client
+  # we kill all master processes again:
+    sleep 1
+    if ps axc | grep [d]ovecot ; then
+      echo "Using killall -9 dovecot 2> /dev/null ...not good."
+    /bin/killall -9 dovecot 2> /dev/null
+      echo "..done."
+      exit 1
+    fi
+}
+
+# Restart Dovecot:
+dovecot_restart() {
+  dovecot_stop
+  sleep 2
+  dovecot_start
+}
+
+case "$1" in
+'start')
+  dovecot_start
+  ;;
+'stop')
+  dovecot_stop
+  ;;
+'restart')
+  dovecot_restart
+  ;;
+*)
+  echo "usage $0 start|stop|restart"
+esac
