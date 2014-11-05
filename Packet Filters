@@ -1,0 +1,53 @@
+#BadTCP
+tcp.analysis.flags && ! tcp.analysis.window_update
+
+#TCP header length is less than 28 and has the SYN flag enabled
+(tcp.hdr_len < 28) && (tcp.flags.syn == 1)
+
+#TCP stream time delta < 1s and packet does not have the RST/FIN flag set and no HTTP GET [&& (http.request.method != "GET")]
+#Plot I/O chart vs tcp.time_delta
+(tcp.time_delta > 1) && (tcp.flags.reset == 0) && (tcp.flags.fin == 0) 
+(tcp.time_delta > .5) && (tcp.flags.reset == 0) && (tcp.flags.fin == 0)
+
+#SMB & SMB2/3 errors
+smb.nt_status > 0 || smb2.nt_status > 0
+
+#General DNS/HTTP/SMB123 errors
+(dns.flags.rcode > 0) || (smb.nt_status > 0) || (smb2.nt_status > 0) || (http.response.code > 399)
+
+#Selective ACK
+tcp.option_kind == 4
+tcp.option_kind == 5
+
+
+
+##Netmon
+//General DNS/HTTP/SMB123 errors
+//(DNS.Flags.Rcode != 0x0) || (HTTP.Response.StatusCode > "399") || (SMB.SMBHeader.Flags2.NTStatus > 0) || (SMB2.SMB2Header.Status > 0)
+
+//Find SMB1+2 errors
+SMB.SMBHeader.Flags2.NTStatus > 0 || SMB2.SMB2Header.Status.Code > 0
+
+
+//TCP Time delta < 1s. Drop 0s to see slow traffic
+//Packet does not have the RST/FIN flag set and ignore HTTP GETs
+//&& HTTP.Request.Command != "GET"
+//Convert the value based on .1 microsecond chunks. 1 second = 1000000 microseconds = 10,000,000. OR 500000 for 0.5s
+(FrameVariable.TimeDelta > 1000000) && (tcp.flags.fin == 0) && (tcp.flags.reset == 0) 
+
+
+//TCP connection issues - TCP header in a syn packet with less than 28 bytes
+(TCP.DataOffset < 28) && (tcp.flags.syn == 1)
+
+
+##MMA
+*TCPDiagnosis
+SMB#DiagnosisLevels== Standard.DiagnosisLevel.Warning || SMB2#DiagnosisLevels== Standard.DiagnosisLevel.Warning
+
+
+
+tcp.analysis.flags && ! tcp.analysis.window_update && ip.addr == 172.20.113.10 && ip.addr == 172.21.60.20
+tcp.TCPOptions.Option.SACK.type == 4 //Sack-Permitted Option Length=2
+tcp.TCPOptions.Option.SACK.type == 5 //Sack Option Format  Length: Variable
+
+
