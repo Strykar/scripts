@@ -1,0 +1,7 @@
+#1
+cacls d:\cygwin /T /e /g Administrators:f
+rmdir /S d:\cygwin
+
+#2
+takeown /f "d:\cygwin" /r /d Y
+icacls "d:\cygwin" /T /Q /C /reset
