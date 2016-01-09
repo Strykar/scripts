@@ -9,4 +9,4 @@ MYHOST=localhost
 # geckoo :Server Up 62 days, 22:28:41
 # geckoo :Highest connection count: 11 (9 clients) (381 connections received)
 
-( echo NICK geckoo ; echo 'USER strykar 8 * :strykar' ; echo OPER geckoo hubbahubbahubba123 ; echo TIME ; echo STATS u ; echo QUIT :Done ; sleep 10 ) | telnet $MYHOST 6667 | awk '{ print substr($0, index($0,$3)) }' | grep -A 1 -B 1 -w ":Server Up" >> /home/strykar/scripts/logs/ircd_result.txt
+( echo NICK geckoo ; echo 'USER strykar 8 * :strykar' ; echo OPER geckoo OPERPassHERE ; echo TIME ; echo STATS u ; echo QUIT :Done ; sleep 10 ) | telnet $MYHOST 6667 | awk '{ print substr($0, index($0,$3)) }' | grep -A 1 -B 1 -w ":Server Up" >> /home/strykar/scripts/logs/ircd_result.txt
