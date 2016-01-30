@@ -1,4 +1,5 @@
 #!/bin/sh
+#Script to rsync Slackware security updates and check their signatures
 #rsync -F --exclude="*mkinit*" -av --progress rsync://rsync.osuosl.org/slackware/slackware-12.2/patches/packages/ .
 #rsync -F --exclude="*mkinit*" --exclude='linux-3.10.17-2' -av --progress rsync://rsync.osuosl.org/slackware/slackware64-14.1/patches/packages/ .
 
