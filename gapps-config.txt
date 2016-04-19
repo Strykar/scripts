@@ -1,7 +1,46 @@
+## This is an 'Include' style gapps-config in 3 sections that:
+## 1. Lists the stock apps to remove. Yes, just list them in an Include style config too.
+## 2. Forces install of the stock apps listed. The + prevents these being uninstalled by accident, like listing them in 1 above.
+## 3. Installs only the Google Apps we list. https://github.com/opengapps/opengapps/wiki/Advanced-Features-and-Options
+
 Include
+
+## Skip installing swype keyboard libs, we use the stock keyboard which does not support it
+skipswypelibs
+
+## Disable Smart Pre-ODEXing of APKs
+#NoPreODEX
+## Enable Pre-ODEXing
+#PreODEX
+
+
+## 1.
+BasicDreams
+Browser # Chrome
+CalendarStock # CalendarGoogle
+CameraStock # CameraGoogle
+ClockStock # ClockGoogle
+CMAccount # Is this even required anymore?
+CMSetupWizard  # Removed, breaks Google setup
+DashClock
+Email # Gmail
+ExchangeStock
+Galaxy
+HoloSpiral
+LiveWallpapers
+NoiseField
+Phasebeam
+PhotoPhase
+PhotoTable
+PicoTTS # GoogleTTS
+Provision
+VisualizationWallpapers
 SimToolKit
+SykoPath
 TagStock
-+CMAccount
+WhisperPush # Removed, use Silent Circle
+
+## 2.
 +CMAudioFX
 +CMFileManager
 +CMMusic
@@ -16,6 +55,8 @@ TagStock
 +Terminal
 +Themes
 +Studio
+
+## 3.
 CalendarGoogle
 CalSync
 CalculatorGoogle
@@ -26,7 +67,7 @@ ContactsGoogle
 DialerFramework
 Drive
 Earth
-Gmail
+Gmail # Google Exchange Sync not installed
 GoogleTTS
 Maps
 PackageInstallerGoogle
@@ -34,4 +75,3 @@ Street
 Translate
 WebviewGoogle
 YouTube
-skipswypelibs
