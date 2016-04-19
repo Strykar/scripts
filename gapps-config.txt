@@ -1,4 +1,6 @@
 Include
+SimToolKit
+TagStock
 +CMAccount
 +CMAudioFX
 +CMFileManager
