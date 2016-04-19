@@ -1,5 +1,4 @@
 Include
-+ClockStock
 +CMAccount
 +CMAudioFX
 +CMFileManager
@@ -15,7 +14,6 @@ Include
 +Terminal
 +Themes
 +Studio
-+SimToolKit
 CalendarGoogle
 CalSync
 CalculatorGoogle
@@ -26,7 +24,6 @@ ContactsGoogle
 DialerFramework
 Drive
 Earth
-ExchangeGoogle
 Gmail
 GoogleTTS
 Maps
