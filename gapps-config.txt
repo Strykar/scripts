@@ -65,6 +65,7 @@ Chrome
 ClockGoogle
 ContactsGoogle
 DialerFramework
+DialerGoogle # Needs to be set in Phone, see http://opengapps.org/blog/post/2016/05/13/google-dialer-for-all
 Drive
 Earth
 Gmail # Google Exchange Sync not installed
